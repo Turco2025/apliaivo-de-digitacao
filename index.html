@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dedo Certo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: uma coluna de trabalho centrada; a trilha de níveis é uma lista, o treino é um painel com texto em cima e teclado ABNT2 embaixo. */
+:root {
+  --bg: #eaf0ee;
+  --surface: #fafcfb;
+  --ink: #13272b;
+  --muted: #55696c;
+  --line: #cbd8d4;
+  --accent: #0a7767;
+  --accent-ink: #ffffff;
+  --warn: #c2410c;
+  --gold: #a9780a;
+  --key: #ffffff;
+  --f1: #d9488b; --f2: #e07b1a; --f3: #c2a000; --f4: #3e9b3e;
+  --f5: #1a9aa8; --f6: #3b76e0; --f7: #7c5ce0; --f8: #b84cc4; --f9: #7d8b8d;
+  --display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --text: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e191b; --surface: #16262a; --ink: #e3eeeb; --muted: #8fa6a5; --line: #2a4044;
+    --accent: #3fc9b0; --accent-ink: #05221d; --warn: #ff8a5c; --gold: #f0c04a; --key: #1d3135;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e191b; --surface: #16262a; --ink: #e3eeeb; --muted: #8fa6a5; --line: #2a4044;
+  --accent: #3fc9b0; --accent-ink: #05221d; --warn: #ff8a5c; --gold: #f0c04a; --key: #1d3135;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 16px/1.55 var(--text);
+}
+.wrap {
+  max-width: 880px; margin: 0 auto; padding-block: 20px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.12; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+#app { display: flex; flex-direction: column; gap: 22px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* topo */
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font: 700 1.35rem var(--display); letter-spacing: -0.01em; }
+.brand span { color: var(--accent); }
+.top small { color: var(--muted); font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+
+/* início */
+.intro { display: flex; flex-direction: column; gap: 12px; }
+.intro h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); letter-spacing: -0.02em; }
+.intro p { max-width: 62ch; color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 0; padding: 14px 0; border-block: 1px solid var(--line); }
+.stats div { display: flex; flex-direction: column; }
+.stats dt { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.stats dd { margin: 0; font: 700 1.5rem var(--display); }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 8px;
+  padding: 10px 18px; font-weight: 600;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); padding-inline: 4px; }
+.btn.quiet:hover { color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.stage { display: flex; flex-direction: column; gap: 8px; }
+.stage h2 { font-size: 1.05rem; display: flex; gap: 10px; align-items: baseline; }
+.stage h2 small { font: 400 .85rem var(--text); color: var(--muted); }
+.levels { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.levels li + li { border-top: 1px solid var(--line); }
+.lv {
+  width: 100%; border: 0; background: transparent; text-align: left;
+  display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;
+  padding: 11px 14px;
+}
+.lv:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.lv:disabled { cursor: not-allowed; color: var(--muted); }
+.lv .n { font: 700 1.1rem var(--display); color: var(--muted); }
+.lv.next .n { color: var(--accent); }
+.lv .t { font-weight: 600; min-width: 0; }
+.lv .t small { display: block; font-weight: 400; color: var(--muted); font-size: .85rem; }
+.lv .s { font-size: .9rem; color: var(--muted); text-align: right; white-space: nowrap; }
+.stars { color: var(--gold); letter-spacing: 2px; font-size: 1rem; }
+.stars i { font-style: normal; opacity: .28; color: var(--muted); }
+.foot { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; color: var(--muted); font-size: .9rem; }
+.foot label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+
+/* nível */
+.crumb { color: var(--muted); font-size: .85rem; letter-spacing: .05em; text-transform: uppercase; }
+.lvhead { display: flex; flex-direction: column; gap: 6px; }
+.lvhead h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); letter-spacing: -0.015em; }
+.lesson { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
+.lesson > div { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.lesson h3 { font: 600 .75rem var(--text); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.lesson .tip h3 { color: var(--accent); }
+.goal { color: var(--muted); font-size: .92rem; }
+.goal b { color: var(--ink); }
+
+.meters { display: flex; flex-wrap: wrap; gap: 6px 28px; align-items: baseline; }
+.meters span { color: var(--muted); font-size: .85rem; }
+.meters b { font: 700 1.25rem var(--display); color: var(--ink); margin-right: 4px; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+
+.pad {
+  position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px 20px; min-height: 7rem;
+}
+.pad:focus-within { border-color: var(--accent); }
+.txt { font: 400 clamp(1.1rem, 2.6vw, 1.45rem)/1.75 var(--mono); white-space: pre-wrap; overflow-wrap: break-word; }
+.txt span { border-radius: 3px; }
+.txt .done { color: var(--muted); opacity: .6; }
+.txt .miss { text-decoration: underline; text-decoration-color: var(--warn); text-decoration-thickness: 2px; text-underline-offset: 4px; opacity: 1; }
+.txt .cur { background: var(--accent); color: var(--accent-ink); }
+.txt .cur.bad { background: var(--warn); }
+#inp { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; font-size: 16px; cursor: text; }
+.veil {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 12px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent); border-radius: 10px;
+  font-weight: 600; pointer-events: none;
+}
+.pad:focus-within .veil { display: none; }
+.hint { min-height: 1.6em; color: var(--muted); font-size: .95rem; }
+.hint b { color: var(--ink); font-family: var(--mono); }
+
+/* teclado ABNT2 */
+.kbwrap { display: flex; flex-direction: column; gap: 10px; max-width: 760px; width: 100%; margin: 0 auto; }
+.kb { display: flex; flex-direction: column; gap: clamp(2px, .6vw, 5px); }
+.kr { display: flex; gap: clamp(2px, .6vw, 5px); }
+.k {
+  flex: var(--w) 1 0; min-width: 0; height: clamp(26px, 5.6vw, 46px);
+  background: color-mix(in srgb, var(--fc, var(--f9)) 20%, var(--key));
+  border: 1px solid color-mix(in srgb, var(--fc, var(--f9)) 45%, var(--line));
+  border-radius: clamp(3px, .8vw, 6px);
+  font: 600 clamp(9px, 1.9vw, 14px)/1 var(--mono);
+  display: grid; place-items: center; position: relative; overflow: hidden;
+}
+.k sup { position: absolute; top: 3px; left: 4px; font-size: .72em; font-weight: 400; color: var(--muted); }
+.k.sp { font-size: clamp(7px, 1.3vw, 11px); font-weight: 400; color: var(--muted); }
+.k.home::after { content: ""; position: absolute; bottom: 3px; width: 30%; height: 2px; border-radius: 1px; background: currentColor; opacity: .55; }
+.k.down { transform: translateY(1px); filter: brightness(.9); }
+.k.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.k.go sup { color: var(--accent-ink); }
+.k.go2 { box-shadow: inset 0 0 0 2px var(--accent); }
+.fingers { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: center; }
+.fingers div { display: flex; gap: 4px; }
+.fg {
+  font-size: .72rem; padding: 2px 7px; border-radius: 99px;
+  background: color-mix(in srgb, var(--fc) 20%, var(--key)); border: 1px solid color-mix(in srgb, var(--fc) 45%, var(--line));
+}
+.fg.on { background: var(--fc); color: #fff; border-color: var(--fc); font-weight: 700; }
+
+/* resultado */
+.result { display: flex; flex-direction: column; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 20px; }
+.result h2 { font-size: 1.5rem; }
+.result .stars { font-size: 1.6rem; }
+.result .stats { border: 0; padding: 0; }
+.result p { max-width: 62ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Dedo<span>Certo</span></div>
+    <small>Digitação · teclado ABNT2</small>
+  </header>
+  <main id="app"></main>
+</div>
+<script>
+(function () {
+'use strict';
+
+/* ---------- Teclado ABNT2: [code, tecla, com Shift, largura, dedo] ---------- */
+var ROWS = [
+  [['Backquote',"'",'"',1,1],['Digit1','1','!',1,1],['Digit2','2','@',1,2],['Digit3','3','#',1,3],['Digit4','4','$',1,4],['Digit5','5','%',1,4],['Digit6','6','¨',1,5],['Digit7','7','&',1,5],['Digit8','8','*',1,6],['Digit9','9','(',1,7],['Digit0','0',')',1,8],['Minus','-','_',1,8],['Equal','=','+',1,8],['Backspace','⌫','',2,0]],
+  [['Tab','Tab','',1.5,0],['KeyQ','q','',1,1],['KeyW','w','',1,2],['KeyE','e','',1,3],['KeyR','r','',1,4],['KeyT','t','',1,4],['KeyY','y','',1,5],['KeyU','u','',1,5],['KeyI','i','',1,6],['KeyO','o','',1,7],['KeyP','p','',1,8],['BracketLeft','´','`',1,8],['BracketRight','[','{',1,8],['Enter','Enter','',1.5,0]],
+  [['CapsLock','Caps','',1.75,0],['KeyA','a','',1,1],['KeyS','s','',1,2],['KeyD','d','',1,3],['KeyF','f','',1,4],['KeyG','g','',1,4],['KeyH','h','',1,5],['KeyJ','j','',1,5],['KeyK','k','',1,6],['KeyL','l','',1,7],['Semicolon','ç','',1,8],['Quote','~','^',1,8],['Backslash',']','}',1,8],['Enter2','','',1.25,0]],
+  [['ShiftLeft','Shift','',1.25,0],['IntlBackslash','\\','|',1,1],['KeyZ','z','',1,1],['KeyX','x','',1,2],['KeyC','c','',1,3],['KeyV','v','',1,4],['KeyB','b','',1,4],['KeyN','n','',1,5],['KeyM','m','',1,5],['Comma',',','<',1,6],['Period','.','>',1,7],['Slash',';',':',1,8],['IntlRo','/','?',1,8],['ShiftRight','Shift','',1.75,0]],
+  [['ControlLeft','Ctrl','',1.5,0],['MetaLeft','Win','',1.25,0],['AltLeft','Alt','',1.25,0],['Space','','',6.5,9],['AltRight','AltGr','',1.5,0],['ContextMenu','Menu','',1.5,0],['ControlRight','Ctrl','',1.5,0]]
+];
+var FINGER = ['', 'mínimo esquerdo', 'anelar esquerdo', 'médio esquerdo', 'indicador esquerdo', 'indicador direito', 'médio direito', 'anelar direito', 'mínimo direito', 'polegar'];
+var FSHORT = ['', 'Mín.', 'Anelar', 'Médio', 'Indic.', 'Indic.', 'Médio', 'Anelar', 'Mín.', 'Polegares'];
+var MAP = {};
+ROWS.forEach(function (row) { row.forEach(function (k) {
+  if (!k[4]) return;
+  if (k[0] === 'Space') { MAP[' '] = { code: 'Space', shift: false, finger: 9, label: 'espaço' }; return; }
+  MAP[k[1]] = { code: k[0], shift: false, finger: k[4], label: k[1].toUpperCase() };
+  if (k[2]) MAP[k[2]] = { code: k[0], shift: true, finger: k[4], label: k[2] };
+  if (k[1].toUpperCase() !== k[1]) MAP[k[1].toUpperCase()] = { code: k[0], shift: true, finger: k[4], label: k[1].toUpperCase() };
+}); });
+var DEADS = { '\u0301': '´', '\u0300': '`', '\u0303': '~', '\u0302': '^', '\u0308': '¨' };
+function keyInfo(ch) {
+  if (MAP[ch]) return { main: MAP[ch] };
+  var d = ch.normalize('NFD');
+  if (d.length === 2 && DEADS[d[1]] && MAP[d[0]]) return { dead: MAP[DEADS[d[1]]], main: MAP[d[0]] };
+  return null;
+}
+
+/* ---------- Conteúdo ---------- */
+var WORDS = ('fala sala fada asa assa ala alas salsa falsa laça faça alça falas salas fadas gala galha falha saga ' +
+  'ele ela eles elas se de da das dia dias leia seja ideia ilha filha filhas aldeia saia desde disse fase fases lei leis seda sede lida gelada salada jade haja sigla fiel legal ideal ' +
+  'rua ruas rude dura seguir falar ligar largar lugar regra regras leu riu fera feira ferida agir fugir surgir fui sua seu uso usar juras ' +
+  'tudo todo toda todos todas outro outra estado estados gosto gostar forte fortes sorte tarde tardes hoje folha folhas olho olhos filho filhos solo sol dois dose lado lados falo isto esta este festa lista resto rosto alto altura ' +
+  'que quer quase quatro aqui qual quais porque para por pode poder passo passar papel pessoa pessoas pela pelo parte partes perto pai pais grupo tipo tipos pergunta resposta ' +
+  'mar mais mas me meu meus mesa mesmo maior maio vida viver ver vila viagem vamos move muito muita mim mil mulher tempo homem amor livro ' +
+  'casa casas com como cada coisa coisas cedo certo carro claro cidade cor cores conta contar fica ficar local pouco escola causa crer ' +
+  'bom boa bem bola barco nome nomes nada nunca novo nova ano anos noite uma um bonito banco quando onde ainda antes entre sabe saber trabalho ponto mundo grande nosso bairro ' +
+  'vez voz luz paz feliz zero zona fazer faz fez dizer diz dez exato exame texto caixa baixo peixe prazer rapaz azul exemplo ' +
+  'não são mão mãe pão então estão irmão coração ação nação limão lição atenção opção canção cabeça força preço praça maçã amanhã manhã ' +
+  'café pé até está já lá aí só nós pó céu fácil difícil rápido número música página água árvore útil saúde país baú história família também além alguém ninguém porém ' +
+  'você vocês três mês português inglês avô ônibus câmera pêssego âncora lâmpada ciência experiência à às').split(' ');
+var CAPS = ['Ana mora em Recife.', 'Paulo viu o mar em Santos.', 'O Brasil tem muitas praias.', 'Hoje o dia foi bom.', 'Lucas e Yara leram um livro.', 'Bruno foi a Manaus em maio.', 'Carla e Diego moram em Curitiba.', 'A Bahia fica no Nordeste.', 'Mariana gosta de Minas Gerais.', 'Tiago e Elisa viajam para Fortaleza.', 'O Rio de Janeiro continua lindo.', 'Hugo, Igor e Juliana jogam bola.', 'Felipe trabalha em Campinas.', 'Gabriela nasceu em Salvador.', 'Wagner e Xavier visitam Olinda.', 'Vitor e Karen falam com Zeca.'];
+var ACC2 = ['Você vem amanhã?', 'Que ótimo!', 'Atenção: a lição começa às três.', 'Onde está o ônibus?', 'Parabéns pelo seu português!', 'Vovô e vovó tomam café às seis.', 'Ele lê, você vê e nós três também.', 'Àquela hora, ninguém estava lá.', 'Qual é o seu número?', 'Bom dia! Tudo bem com você?', 'A câmera está com alguém?', 'Lembrete: reunião à tarde.', 'Que experiência incrível!', 'Você fala inglês ou português?'];
+var SYM = ['(casa)', 'e-mail', '10/12/2026', 'R$ 25,00', 'nome@site.com', '"sim"', '50%', '2 + 2 = 4', '#brasil', 'item_1', 'guarda-chuva', '(11) 4002-8922', '"bom dia"', 'a/b', '3 * 7 = 21', 'bem-vindo', 'www.site.com.br', 'R$ 1.200,00', '100%', 'segunda-feira', '[ok]', 'frete + taxa', 'nota: 9,5', 'ana_silva@email.com', 'sala 12-B', '15h30', 'pág. 42', '"não"'];
+var SENT = ['O segredo da velocidade é a precisão.', 'Quem digita sem olhar para o teclado pensa apenas no texto.', 'Devagar se vai ao longe, e com ritmo se chega mais rápido.', 'A prática diária, mesmo curta, vale mais que um treino longo por semana.', 'Água mole em pedra dura, tanto bate até que fura.', 'Não deixe para amanhã o que você pode fazer hoje.', 'O Brasil é um país de dimensões continentais, com clima e paisagens muito variados.', 'Todo começo é difícil, mas a repetição transforma esforço em hábito.', 'Mantenha os dedos na fila guia e volte para ela depois de cada toque.', 'Ler uma palavra à frente ajuda as mãos a não parar.', 'De grão em grão, a galinha enche o papo.', 'A pressa é inimiga da perfeição.', 'Quando os ombros relaxam, as mãos ficam mais leves e rápidas.', 'Escrever bem é pensar com clareza e revisar com paciência.', 'O café da manhã estava ótimo: pão, queijo, frutas e suco de laranja.', 'Você já percebeu como o tempo passa rápido quando estamos concentrados?', 'Às vezes, a melhor solução é a mais simples.', 'Ninguém nasce sabendo; a gente aprende fazendo.', 'A chuva caiu a tarde inteira e deixou o jardim cheio de vida.', 'Um bom texto tem começo, meio e fim.', 'Quem não arrisca não petisca.', 'Na dúvida, diminua a velocidade e mantenha a precisão acima de noventa e cinco por cento.', 'O ônibus das sete saiu atrasado, então chegamos depois da reunião.', 'Cada tecla tem um dedo certo, e cada dedo tem o seu caminho.', 'Mais vale um pássaro na mão do que dois voando.', 'A música tocava baixinho enquanto ela terminava o relatório.', 'Persistência não é repetir o erro, é corrigir e tentar de novo.', 'Depois da tempestade vem a bonança.', 'O mar estava calmo, o céu limpo e a praia quase vazia.', 'Digitar rápido é consequência de digitar certo muitas vezes.', 'Vovô contava histórias incríveis sobre a infância no interior.', 'Antes de enviar a mensagem, leia tudo mais uma vez.', 'Quem tem boca vai a Roma.', 'A ciência avança quando alguém faz uma pergunta que ninguém fez.', 'Respire fundo, solte os punhos e deixe o ritmo conduzir os dedos.', 'Parabéns: você chegou longe, e a prática vai levar você ainda mais longe.'];
+
+var STAGES = ['Fila guia', 'Fila superior', 'Fila inferior', 'Maiúsculas e acentos', 'Números e símbolos', 'Velocidade'];
+/* st = etapa, k = teclas novas, m = modo, w = meta PPM, a = meta precisão, n = tamanho */
+var LEVELS = [
+  { st: 0, t: 'F e J, a posição base', k: 'fj', m: 'keys', w: 8, a: 90, n: 100,
+    l: 'Pouse os indicadores em F e J. Essas duas teclas têm um pequeno relevo: é por ele que os dedos acham o lugar sem você olhar. Os outros dedos descansam ao lado, em A S D F e J K L Ç. Os polegares ficam na barra de espaço.',
+    d: 'Olhos na tela, nunca no teclado. No começo fica mais lento, e é assim mesmo que a memória dos dedos se forma.' },
+  { st: 0, t: 'D e K', k: 'dk', m: 'keys', w: 8, a: 90, n: 100,
+    l: 'D é do dedo médio esquerdo e K do médio direito. Eles já estão em cima das teclas: basta tocar.',
+    d: 'Depois de cada toque, o dedo volta para a fila guia. Toda a velocidade futura depende dessa volta.' },
+  { st: 0, t: 'S e L', k: 'sl', m: 'keys', w: 9, a: 90, n: 100,
+    l: 'S é do anelar esquerdo e L do anelar direito. O anelar é menos independente; no início ele puxa o vizinho junto, e isso passa com a prática.',
+    d: 'Toque leve e curto. Quem bate forte cansa cedo e digita devagar.' },
+  { st: 0, t: 'A e Ç', k: 'aç', m: 'keys', w: 10, a: 90, n: 110,
+    l: 'A é do mínimo esquerdo. No ABNT2 o Ç tem tecla própria, logo à direita do L, no mínimo direito. Com o A você já escreve palavras de verdade.',
+    d: 'Os mínimos são os dedos mais fracos. Vá devagar com eles: a precisão vem antes da velocidade.' },
+  { st: 0, t: 'G e H, fila guia completa', k: 'gh', m: 'keys', w: 12, a: 90, n: 120,
+    l: 'G e H ficam no meio. O indicador esquerdo estica de F para G; o direito estica de J para H.',
+    d: 'Só o indicador se move. A mão fica parada e o dedo volta para F ou J logo depois.' },
+  { st: 1, t: 'E e I', k: 'ei', m: 'keys', w: 12, a: 92, n: 140,
+    l: 'Suba os dedos médios: E com o esquerdo (acima do D), I com o direito (acima do K). O dedo sobe levemente inclinado para a esquerda.',
+    d: 'Mantenha um ritmo constante, como um metrônomo. Ritmo regular rende mais que arrancadas e freadas.' },
+  { st: 1, t: 'R e U', k: 'ru', m: 'keys', w: 13, a: 92, n: 140,
+    l: 'Suba os indicadores: R com o esquerdo (acima do F), U com o direito (acima do J).',
+    d: 'Errou? Não acelere para compensar. Baixe a velocidade até acertar quase tudo; a rapidez volta sozinha.' },
+  { st: 1, t: 'T e O', k: 'to', m: 'keys', w: 14, a: 92, n: 140,
+    l: 'T é do indicador esquerdo, que sobe e estica para a direita. O é do anelar direito, acima do L.',
+    d: 'Postura conta: costas apoiadas, cotovelos perto de 90 graus e punhos soltos, sem pesar na mesa.' },
+  { st: 1, t: 'Q, W, Y e P', k: 'qwyp', m: 'keys', w: 14, a: 92, n: 150,
+    l: 'Q é do mínimo esquerdo e W do anelar esquerdo. Y é do indicador direito, que sobe e estica para a esquerda. P é do mínimo direito.',
+    d: 'Comece a pensar em sílabas, não em letras soltas: "que", "por", "pra" saem como um gesto só.' },
+  { st: 1, t: 'Revisão: palavras inteiras', k: '', m: 'review', w: 16, a: 92, n: 170,
+    l: 'Nada de tecla nova. Aqui você junta a fila guia e a fila superior em palavras comuns do português.',
+    d: 'Leia a palavra inteira antes de digitar. Os olhos devem andar uma palavra à frente dos dedos.' },
+  { st: 2, t: 'V e M', k: 'vm', m: 'keys', w: 16, a: 92, n: 150,
+    l: 'Desça os indicadores: V com o esquerdo (abaixo do F, um pouco à direita), M com o direito (abaixo do J).',
+    d: 'Para alcançar a fila de baixo, dobre o dedo. Não puxe a mão inteira para trás.' },
+  { st: 2, t: 'C e vírgula', k: 'c,', m: 'keys', w: 17, a: 92, n: 150,
+    l: 'C é do médio esquerdo, abaixo do D. A vírgula é do médio direito, abaixo do K. Depois da vírgula vem sempre um espaço.',
+    d: 'Vírgula e espaço formam um movimento só. Treine os dois juntos.' },
+  { st: 2, t: 'B e N', k: 'bn', m: 'keys', w: 18, a: 92, n: 150,
+    l: 'B é do indicador esquerdo, que desce e estica para o centro. N é do indicador direito, abaixo e à esquerda do J.',
+    d: 'Quinze minutos todos os dias valem mais que duas horas no domingo. Sessões curtas fixam melhor.' },
+  { st: 2, t: 'X, Z, ponto e ponto e vírgula', k: 'xz.;', m: 'keys', w: 20, a: 92, n: 160,
+    l: 'X é do anelar esquerdo e Z do mínimo esquerdo. O ponto é do anelar direito. No ABNT2 o ponto e vírgula fica à direita do ponto, no mínimo direito.',
+    d: 'Agora você conhece o alfabeto inteiro. Daqui em diante, velocidade é repetição com precisão.' },
+  { st: 3, t: 'Maiúsculas com Shift', k: 'Shift', m: 'caps', w: 20, a: 92, n: 160,
+    l: 'Segure o Shift com o mínimo da mão oposta à da letra. Para A, use o Shift direito. Para L, o Shift esquerdo. O teclado abaixo mostra qual dos dois usar.',
+    d: 'Não use Caps Lock para uma letra só. Shift, letra, solta: tudo num movimento.' },
+  { st: 3, t: 'Acento agudo e til', k: '´ ~', m: 'acc1', w: 20, a: 92, n: 160,
+    l: 'No ABNT2 os acentos são teclas mortas: você toca o acento, nada aparece, e então toca a letra. O agudo (´) fica à direita do P. O til (~) fica à direita do Ç. Os dois são do mínimo direito.',
+    d: 'Trate acento e letra como um par: ´ + a, ~ + a, ~ + o. Com o tempo vira um gesto único.' },
+  { st: 3, t: 'Circunflexo, crase e pontuação', k: '^ ` : ? !', m: 'acc2', w: 20, a: 92, n: 170,
+    l: 'O circunflexo é Shift + ~. A crase é Shift + ´. Dois pontos é Shift + ; e a interrogação é Shift + / (a tecla ao lado do Shift direito). A exclamação é Shift + 1.',
+    d: 'Em combinações com Shift, aperte o Shift primeiro e solte por último. Sem pressa na troca.' },
+  { st: 4, t: 'Números', k: '0–9', m: 'num', w: 15, a: 92, n: 140,
+    l: 'Na fila de cima: 1 mínimo, 2 anelar, 3 médio, 4 e 5 indicador (mão esquerda); 6 e 7 indicador, 8 médio, 9 anelar, 0 mínimo (mão direita).',
+    d: 'É o ponto mais distante da fila guia. Estique o dedo, toque e volte. Confira no texto, não no teclado.' },
+  { st: 4, t: 'Símbolos do dia a dia', k: '- / ( ) " @ $ %', m: 'sym', w: 15, a: 92, n: 150,
+    l: 'O hífen fica à direita do zero. A barra fica ao lado do Shift direito. Parênteses são Shift + 9 e Shift + 0. As aspas são Shift + a tecla do canto superior esquerdo. O arroba é Shift + 2.',
+    d: 'Símbolos quebram o ritmo de todo mundo. Reduza a velocidade neles e retome nas letras.' },
+  { st: 5, t: 'Frases: 30 PPM', k: '', m: 'sent', w: 30, a: 94, n: 220,
+    l: 'A partir daqui o treino é com frases completas, com maiúsculas, acentos e pontuação. Trinta palavras por minuto já é mais rápido que a maioria das pessoas que digitam olhando para o teclado.',
+    d: 'Não pare quando errar. Corrija a tecla e siga no mesmo ritmo; a pausa custa mais que o erro.' },
+  { st: 5, t: 'Textos: 38 PPM', k: '', m: 'sent', w: 38, a: 94, n: 280,
+    l: 'Textos mais longos pedem fôlego. O objetivo é manter a mesma velocidade do começo ao fim.',
+    d: 'As palavras mais comuns (que, de, para, com, não) devem sair como um bloco só, sem pensar nas letras.' },
+  { st: 5, t: 'Ritmo: 46 PPM', k: '', m: 'sent', w: 46, a: 95, n: 320,
+    l: 'Neste ponto o limite costuma ser a tensão, não o conhecimento das teclas.',
+    d: 'Relaxe ombros e mãos. Se os erros aumentarem, volte uns 10% na velocidade e suba de novo aos poucos.' },
+  { st: 5, t: 'Fluência: 55 PPM', k: '', m: 'sent', w: 55, a: 95, n: 360,
+    l: 'Cinquenta e cinco palavras por minuto é ritmo de quem digita profissionalmente.',
+    d: 'Antecipe: enquanto um dedo toca, o próximo já se posiciona. Sequências que alternam as mãos são as mais rápidas.' },
+  { st: 5, t: 'Mestre: 65 PPM', k: '', m: 'sent', w: 65, a: 96, n: 420,
+    l: 'O nível máximo. Sessenta e cinco palavras por minuto com 96% de precisão, em texto com acentos e pontuação.',
+    d: 'Aqui o que conta é consistência. Volte a este nível de tempos em tempos: os textos mudam a cada tentativa.' }
+];
+
+/* ---------- Gerador de exercícios ---------- */
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function lettersUpTo(i) { var s = ''; for (var x = 0; x <= i; x++) if (LEVELS[x].m === 'keys') s += LEVELS[x].k; return s; }
+function allowedWords(set) { return WORDS.filter(function (w) { for (var i = 0; i < w.length; i++) if (set.indexOf(w[i]) < 0) return false; return true; }); }
+function fill(len, next) {
+  var out = [], size = 0, last = '';
+  while (size < len) { var t = next(); if (t === last) continue; last = t; out.push(t); size += t.length + 1; }
+  return out.join(' ');
+}
+function drill(nw, known, len) {
+  var parts = [];
+  nw.split('').forEach(function (c) { if (/[a-zç]/.test(c)) parts.push(c + c + c); });
+  if (nw.length >= 2) { parts.push(nw[0] + nw[1] + nw[0], nw[1] + nw[0] + nw[1]); }
+  var head = parts.join(' ');
+  var rest = fill(Math.max(10, len - head.length), function () {
+    var n = 2 + Math.floor(Math.random() * 3), g = '';
+    for (var i = 0; i < n; i++) {
+      var c = (!known || Math.random() < 0.6) ? pick(nw.split('')) : pick(known.split(''));
+      if (/[,.;]/.test(c) && i === 0) c = pick((known || nw).replace(/[,.;]/g, '').split(''));
+      g += c;
+    }
+    return g;
+  });
+  return (head ? head + ' ' : '') + rest;
+}
+function makeText(i) {
+  var L = LEVELS[i], set, pool;
+  if (L.m === 'keys') {
+    set = lettersUpTo(i);
+    var known = set.slice(0, set.length - L.k.length);
+    var punct = L.k.replace(/[a-zç]/g, '');
+    var all = allowedWords(set);
+    pool = all.filter(function (w) { for (var j = 0; j < L.k.length; j++) if (w.indexOf(L.k[j]) >= 0) return true; return false; });
+    if (pool.length < 5) return drill(L.k, known, L.n);
+    var d = drill(L.k, known, Math.round(L.n * 0.4));
+    var w = fill(Math.round(L.n * 0.6), function () {
+      var x = Math.random() < 0.7 ? pick(pool) : pick(all);
+      if (punct && Math.random() < 0.3) x += pick(punct.split(''));
+      return x;
+    });
+    return d + ' ' + w.replace(/[,;]$/, '');
+  }
+  if (L.m === 'review') { pool = allowedWords(lettersUpTo(i)); return fill(L.n, function () { return pick(pool); }); }
+  if (L.m === 'caps') return fill(L.n, function () { return pick(CAPS); });
+  if (L.m === 'acc1') {
+    pool = WORDS.filter(function (w) { return /[áéíóúãõ]/.test(w) && !/[âêôà]/.test(w); });
+    var plain = allowedWords('abcdefghijklmnopqrstuvwxyzç');
+    return fill(L.n, function () { return Math.random() < 0.75 ? pick(pool) : pick(plain); });
+  }
+  if (L.m === 'acc2') {
+    pool = WORDS.filter(function (w) { return /[âêôà]/.test(w); });
+    return fill(L.n, function () { return Math.random() < 0.4 ? pick(pool) : pick(ACC2); });
+  }
+  if (L.m === 'num') {
+    var wd = ['dias', 'anos', 'reais', 'itens', 'horas', 'pessoas', 'casa', 'sala', 'km', 'de maio', 'de julho'];
+    return fill(L.n, function () {
+      var n = String(Math.floor(Math.random() * Math.pow(10, 1 + Math.floor(Math.random() * 4))));
+      return Math.random() < 0.4 ? n + ' ' + pick(wd) : n;
+    });
+  }
+  if (L.m === 'sym') return fill(L.n, function () { return pick(SYM); });
+  var q = shuffle(SENT), out = '';
+  while (out.length < L.n && q.length) out += (out ? ' ' : '') + q.pop();
+  return out;
+}
+
+/* ---------- Progresso ---------- */
+var KEY = 'dedo-certo-v1';
+var S = { best: {}, all: false, kb: true };
+try { var raw = localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); if (p && p.best) S = p; } } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function passed(i) { return !!(S.best[i] && S.best[i].stars > 0); }
+function unlocked(i) { return S.all || i === 0 || passed(i - 1); }
+function nextLevel() { for (var i = 0; i < LEVELS.length; i++) if (!passed(i)) return i; return LEVELS.length - 1; }
+function starsHtml(n) { return '<span class="stars" aria-label="' + n + ' de 3 estrelas">' + '★★★'.slice(0, n) + '<i>' + '★★★'.slice(n) + '</i></span>'; }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var app = document.getElementById('app');
+var R = null; /* estado do treino em andamento */
+
+/* ---------- Tela inicial ---------- */
+function home() {
+  R = null;
+  var nx = nextLevel(), done = 0, top = 0;
+  for (var i = 0; i < LEVELS.length; i++) { if (passed(i)) done++; if (S.best[i]) top = Math.max(top, S.best[i].wpm); }
+  var h = '<section class="intro"><h1>Digite sem olhar, um nível de cada vez.</h1>' +
+    '<p>São ' + LEVELS.length + ' níveis para o teclado brasileiro ABNT2. Cada nível explica quais dedos usar, dá uma técnica para ganhar velocidade e libera o próximo quando você atinge a meta de palavras por minuto (PPM) e de precisão.</p></section>' +
+    '<dl class="stats"><div><dt>Seu nível</dt><dd class="num">' + (nx + 1) + '<small style="font-size:.9rem;color:var(--muted)"> de ' + LEVELS.length + '</small></dd></div>' +
+    '<div><dt>Concluídos</dt><dd class="num">' + done + '</dd></div>' +
+    '<div><dt>Melhor velocidade</dt><dd class="num">' + (top ? top + ' PPM' : '—') + '</dd></div></dl>' +
+    '<div class="row"><button class="btn primary" data-go="' + nx + '">' + (done ? 'Continuar no nível ' : 'Começar pelo nível ') + (nx + 1) + '</button></div>';
+  STAGES.forEach(function (name, s) {
+    var items = '';
+    LEVELS.forEach(function (L, i) {
+      if (L.st !== s) return;
+      var open = unlocked(i), b = S.best[i];
+      items += '<li><button class="lv' + (i === nx ? ' next' : '') + '" data-go="' + i + '"' + (open ? '' : ' disabled') + '>' +
+        '<span class="n num">' + (i + 1) + '</span>' +
+        '<span class="t">' + esc(L.t) + '<small>Meta: ' + L.w + ' PPM com ' + L.a + '% de precisão</small></span>' +
+        '<span class="s">' + (b ? starsHtml(b.stars) + '<br><span class="num">' + b.wpm + ' PPM</span>' : (open ? 'Aberto' : 'Bloqueado')) + '</span></button></li>';
+    });
+    h += '<section class="stage"><h2>' + name + '</h2><ul class="levels">' + items + '</ul></section>';
+  });
+  h += '<div class="foot"><label><input type="checkbox" id="all"' + (S.all ? ' checked' : '') + '> Liberar todos os níveis</label>' +
+    '<button class="btn quiet" id="reset">Apagar meu progresso</button></div>';
+  app.innerHTML = h;
+  document.getElementById('all').onchange = function () { S.all = this.checked; save(); home(); };
+  var rb = document.getElementById('reset'), armed = false;
+  rb.onclick = function () {
+    if (!armed) { armed = true; rb.textContent = 'Clique de novo para apagar tudo'; setTimeout(function () { armed = false; if (rb.isConnected) rb.textContent = 'Apagar meu progresso'; }, 4000); return; }
+    S = { best: {}, all: false, kb: true }; save(); home();
+  };
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Tela do nível ---------- */
+function kbHtml() {
+  var h = '<div class="kb" aria-hidden="true">';
+  ROWS.forEach(function (row) {
+    h += '<div class="kr">';
+    row.forEach(function (k) {
+      var sp = !k[4] || k[0] === 'Space';
+      var lab = k[0] === 'Space' ? '' : (sp ? k[1] : k[1].toUpperCase());
+      h += '<div class="k' + (sp ? ' sp' : '') + (k[0] === 'KeyF' || k[0] === 'KeyJ' ? ' home' : '') + '" data-code="' + k[0] + '" style="--w:' + k[3] + (k[4] ? ';--fc:var(--f' + k[4] + ')' : '') + '">' +
+        (k[2] ? '<sup>' + esc(k[2]) + '</sup>' : '') + esc(lab) + '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div><div class="fingers" aria-hidden="true"><div>';
+  for (var f = 1; f <= 8; f++) { h += '<span class="fg" data-f="' + f + '" style="--fc:var(--f' + f + ')">' + FSHORT[f] + '</span>'; if (f === 4) h += '</div><span class="fg" data-f="9" style="--fc:var(--f9)">' + FSHORT[9] + '</span><div>'; }
+  return h + '</div></div>';
+}
+function level(i) {
+  var L = LEVELS[i];
+  app.innerHTML = '<div class="lvhead"><div class="row"><button class="btn quiet" id="back">← Todos os níveis</button></div>' +
+    '<div class="crumb">Nível ' + (i + 1) + ' de ' + LEVELS.length + ' · ' + STAGES[L.st] + '</div><h1>' + esc(L.t) + '</h1></div>' +
+    '<div class="lesson"><div><h3>O que é novo</h3><p>' + esc(L.l) + '</p></div>' +
+    '<div class="tip"><h3>Para ganhar velocidade</h3><p>' + esc(L.d) + '</p></div></div>' +
+    '<p class="goal">Meta para liberar o próximo nível: <b>' + L.w + ' PPM</b> com <b>' + L.a + '%</b> de precisão. A tecla errada não avança: corrija e siga.</p>' +
+    '<div id="stage"></div>' +
+    '<div class="kbwrap"><div id="kbbox">' + kbHtml() + '</div><div class="row" style="justify-content:center"><button class="btn quiet" id="kbt"></button></div></div>';
+  document.getElementById('back').onclick = home;
+  var kbt = document.getElementById('kbt'), box = document.getElementById('kbbox');
+  function kbState() { box.hidden = !S.kb; kbt.textContent = S.kb ? 'Esconder o teclado (treino sem cola)' : 'Mostrar o teclado'; }
+  kbt.onclick = function () { S.kb = !S.kb; save(); kbState(); if (R) R.inp.focus(); };
+  kbState();
+  start(i);
+  window.scrollTo(0, 0);
+}
+
+function start(i) {
+  var text = makeText(i);
+  var stage = document.getElementById('stage');
+  stage.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<div class="meters"><span><b class="num" id="mw">0</b>PPM</span><span><b class="num" id="ma">100%</b>precisão</span><span><b class="num" id="mt">0:00</b>tempo</span></div>' +
+    '<div class="bar"><i id="mb"></i></div>' +
+    '<div class="pad"><div class="txt" id="txt"></div>' +
+    '<input id="inp" type="text" aria-label="Digite o texto mostrado" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">' +
+    '<div class="veil">Clique aqui ou aperte qualquer tecla para começar</div></div>' +
+    '<div class="hint" id="hint"></div></div>';
+  var txt = document.getElementById('txt'), spans = [];
+  for (var c = 0; c < text.length; c++) { var sp = document.createElement('span'); sp.textContent = text[c]; txt.appendChild(sp); spans.push(sp); }
+  R = { i: i, text: text, spans: spans, idx: 0, ok: 0, err: 0, miss: {}, t0: 0, dead: false, used: 0, done: false,
+        inp: document.getElementById('inp'), timer: null };
+  R.inp.addEventListener('input', onInput);
+  R.inp.addEventListener('compositionend', function () { R.inp.value = ''; R.used = 0; });
+  paint();
+  R.inp.focus({ preventScroll: true });
+}
+
+function onInput(e) {
+  if (!R || R.done) return;
+  var inp = R.inp, v = inp.value.normalize('NFC');
+  if (v.length < R.used) R.used = v.length;
+  var fresh = v.slice(R.used);
+  if (e.isComposing) {
+    if (fresh && DEADS_SET.indexOf(fresh[fresh.length - 1]) >= 0) return; /* acento esperando a letra */
+    R.used = v.length;
+  } else { inp.value = ''; R.used = 0; }
+  for (var j = 0; j < fresh.length; j++) if (!type(fresh[j])) break;
+  R.dead = false;
+  paint();
+  if (R.idx >= R.text.length) finish();
+}
+var DEADS_SET = ['´', '`', '~', '^', '¨'];
+
+function type(ch) {
+  if (R.idx >= R.text.length) return false;
+  if (!R.t0) { R.t0 = performance.now(); R.timer = setInterval(meters, 400); }
+  if (ch === '\u00a0') ch = ' ';
+  var want = R.text[R.idx], sp = R.spans[R.idx];
+  if (ch === want) { R.ok++; sp.className = 'done' + (sp.dataset.m ? ' miss' : ''); R.idx++; return true; }
+  R.err++; R.miss[want] = (R.miss[want] || 0) + 1; sp.dataset.m = '1'; R.bad = true;
+  return false;
+}
+
+function stats() {
+  var min = R.t0 ? (performance.now() - R.t0) / 60000 : 0;
+  var tot = R.ok + R.err;
+  return { wpm: min > 0 ? Math.round(R.idx / 5 / min) : 0, acc: tot ? Math.round(R.ok / tot * 100) : 100, sec: Math.round(min * 60) };
+}
+function meters() {
+  if (!R || !document.getElementById('mw')) return;
+  var s = stats();
+  document.getElementById('mw').textContent = s.wpm;
+  document.getElementById('ma').textContent = s.acc + '%';
+  document.getElementById('mt').textContent = Math.floor(s.sec / 60) + ':' + ('0' + s.sec % 60).slice(-2);
+  document.getElementById('mb').style.width = (R.idx / R.text.length * 100) + '%';
+}
+
+function paint() {
+  if (!R) return;
+  var cur = R.spans[R.idx];
+  R.spans.forEach(function (s) { if (s.classList.contains('cur')) s.className = ''; });
+  if (cur) {
+    cur.className = 'cur' + (R.bad ? ' bad' : '');
+    if (R.bad) { var c0 = cur; setTimeout(function () { c0.classList.remove('bad'); }, 220); }
+    if (cur.scrollIntoView && (cur.getBoundingClientRect().bottom > innerHeight || cur.getBoundingClientRect().top < 0)) cur.scrollIntoView({ block: 'center' });
+  }
+  R.bad = false;
+  meters();
+  /* teclado e dica */
+  var keys = document.querySelectorAll('.k'), fgs = document.querySelectorAll('.fg'), hint = document.getElementById('hint');
+  keys.forEach(function (k) { k.classList.remove('go', 'go2'); });
+  fgs.forEach(function (f) { f.classList.remove('on'); });
+  if (!cur) { hint.textContent = ''; return; }
+  var ch = R.text[R.idx], info = keyInfo(ch);
+  if (!info) { hint.textContent = ''; return; }
+  var step = (info.dead && !R.dead) ? info.dead : info.main;
+  mark(step.code, 'go');
+  if (step.shift) mark(step.finger <= 4 ? 'ShiftRight' : 'ShiftLeft', 'go');
+  if (info.dead && !R.dead) mark(info.main.code, 'go2');
+  fgs.forEach(function (f) { if (+f.dataset.f === step.finger) f.classList.add('on'); });
+  function desc(k) { return (k.shift ? 'Shift ' + (k.finger <= 4 ? 'direito' : 'esquerdo') + ' + ' : '') + '<b>' + esc(k.label) + '</b> (' + FINGER[k.finger] + ')'; }
+  hint.innerHTML = info.dead
+    ? 'Para <b>' + esc(ch) + '</b>: primeiro ' + desc(info.dead) + ', depois ' + desc(info.main)
+    : 'Próxima tecla: ' + desc(info.main);
+  function mark(code, cls) { var el = document.querySelector('.k[data-code="' + code + '"]'); if (el) el.classList.add(cls); }
+}
+
+function finish() {
+  R.done = true; clearInterval(R.timer);
+  var s = stats(), L = LEVELS[R.i], i = R.i;
+  var ok = s.wpm >= L.w && s.acc >= L.a, stars = 0;
+  if (ok) { stars = 1; if (s.wpm >= L.w * 1.25 && s.acc >= L.a + 2) stars = 2; if (s.wpm >= L.w * 1.5 && s.acc >= 98) stars = 3; }
+  var b = S.best[i];
+  if (!b || stars > b.stars || (stars === b.stars && s.wpm > b.wpm)) { S.best[i] = { wpm: s.wpm, acc: s.acc, stars: stars }; save(); }
+  var worst = Object.keys(R.miss).sort(function (a, c) { return R.miss[c] - R.miss[a]; }).slice(0, 4);
+  var last = i === LEVELS.length - 1, title, msg;
+  if (ok && last) { title = 'Nível máximo concluído'; msg = 'Você chegou ao topo da trilha. Para manter o ritmo, repita este nível de vez em quando: o texto muda a cada tentativa.'; }
+  else if (ok) { title = 'Meta atingida'; msg = stars === 3 ? 'Três estrelas. Você está pronto para o próximo nível.' : 'O próximo nível está liberado. Para mais estrelas, repita com mais velocidade mantendo a precisão.'; }
+  else if (s.acc < L.a) { title = 'Ainda não: faltou precisão'; msg = 'Sua precisão foi de ' + s.acc + '% e a meta é ' + L.a + '%. Repita mais devagar, de propósito. Quando os erros somem, a velocidade sobe sem esforço.'; }
+  else { title = 'Ainda não: faltou velocidade'; msg = 'Você fez ' + s.wpm + ' PPM e a meta é ' + L.w + '. A precisão está boa, então mantenha o toque e busque um ritmo contínuo, sem pausas entre as palavras.'; }
+  var canNext = !last && unlocked(i + 1);
+  document.getElementById('stage').innerHTML = '<div class="result" role="status"><div>' + starsHtml(stars) + '<h2>' + title + '</h2></div>' +
+    '<dl class="stats"><div><dt>Velocidade</dt><dd class="num">' + s.wpm + ' PPM</dd></div><div><dt>Precisão</dt><dd class="num">' + s.acc + '%</dd></div>' +
+    '<div><dt>Tempo</dt><dd class="num">' + Math.floor(s.sec / 60) + ':' + ('0' + s.sec % 60).slice(-2) + '</dd></div><div><dt>Erros</dt><dd class="num">' + R.err + '</dd></div></dl>' +
+    '<p>' + msg + '</p>' +
+    (worst.length ? '<p class="goal">Teclas que mais custaram: ' + worst.map(function (c) { return '<b style="font-family:var(--mono)">' + (c === ' ' ? 'espaço' : esc(c)) + '</b> (' + R.miss[c] + ')'; }).join(', ') + '</p>' : '') +
+    '<div class="row">' + (canNext ? '<button class="btn primary" id="nx">Próximo nível</button>' : '') +
+    '<button class="btn' + (canNext ? '' : ' primary') + '" id="again">Repetir este nível</button><button class="btn quiet" id="hm">Todos os níveis</button></div></div>';
+  document.querySelectorAll('.k').forEach(function (k) { k.classList.remove('go', 'go2'); });
+  document.getElementById('again').onclick = function () { start(i); };
+  document.getElementById('hm').onclick = home;
+  if (canNext) document.getElementById('nx').onclick = function () { level(i + 1); };
+  (document.getElementById('nx') || document.getElementById('again')).focus();
+}
+
+/* ---------- Eventos globais ---------- */
+app.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-go]');
+  if (b && !b.disabled) level(+b.dataset.go);
+});
+document.addEventListener('keydown', function (e) {
+  var k = document.querySelector('.k[data-code="' + e.code + '"]');
+  if (k) k.classList.add('down');
+  if (!R) return;
+  if (e.key === 'Escape') { start(R.i); return; }
+  if (R.done) return;
+  if (e.key === 'Dead') { R.dead = true; paint(); }
+  if (e.key === 'Tab') e.preventDefault();
+  if (document.activeElement !== R.inp && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) R.inp.focus({ preventScroll: true });
+});
+document.addEventListener('keyup', function (e) {
+  var k = document.querySelector('.k[data-code="' + e.code + '"]');
+  if (k) k.classList.remove('down');
+});
+window.addEventListener('blur', function () { document.querySelectorAll('.k.down').forEach(function (k) { k.classList.remove('down'); }); });
+
+home();
+})();
+</script>
+</body>
+</html>
