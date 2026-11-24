@@ -167,6 +167,23 @@ p { margin: 0; }
 }
 .fg.on { background: var(--fc); color: #fff; border-color: var(--fc); font-weight: 700; }
 
+/* passos e mãos */
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .9rem; color: var(--muted); border-block: 1px solid var(--line); padding-block: 10px; }
+.steps li.on { color: var(--ink); font-weight: 700; box-shadow: 0 2px 0 var(--accent); }
+.steps li.ok { color: var(--accent); }
+.col, .panel { display: flex; flex-direction: column; gap: 10px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.panel p { max-width: 64ch; }
+.say { font: 700 1.2rem var(--display); }
+.chk { font: 600 1rem var(--mono); width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); }
+.chk.ok { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.kbpos { position: relative; padding-bottom: 34px; }
+.hands { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.palm { fill: var(--ink); opacity: .14; }
+.fl { stroke-linecap: round; opacity: .4; }
+.ft { fill-opacity: .3; stroke-width: 2; }
+.ft.act { fill-opacity: 0; stroke-width: 3.5; }
+
 /* resultado */
 .result { display: flex; flex-direction: column; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 20px; }
 .result h2 { font-size: 1.5rem; }
@@ -396,7 +413,7 @@ function home() {
   var nx = nextLevel(), done = 0, top = 0;
   for (var i = 0; i < LEVELS.length; i++) { if (passed(i)) done++; if (S.best[i]) top = Math.max(top, S.best[i].wpm); }
   var h = '<section class="intro"><h1>Digite sem olhar, um nível de cada vez.</h1>' +
-    '<p>São ' + LEVELS.length + ' níveis para o teclado brasileiro ABNT2. Cada nível explica quais dedos usar, dá uma técnica para ganhar velocidade e libera o próximo quando você atinge a meta de palavras por minuto (PPM) e de precisão.</p></section>' +
+    '<p>São ' + LEVELS.length + ' níveis para o teclado brasileiro ABNT2. Em cada nível você coloca as mãos na posição, eu digito primeiro mostrando qual dedo aperta cada tecla, e depois você copia. O nível seguinte abre quando você atinge a meta de palavras por minuto (PPM) e de precisão.</p></section>' +
     '<dl class="stats"><div><dt>Seu nível</dt><dd class="num">' + (nx + 1) + '<small style="font-size:.9rem;color:var(--muted)"> de ' + LEVELS.length + '</small></dd></div>' +
     '<div><dt>Concluídos</dt><dd class="num">' + done + '</dd></div>' +
     '<div><dt>Melhor velocidade</dt><dd class="num">' + (top ? top + ' PPM' : '—') + '</dd></div></dl>' +
@@ -425,9 +442,87 @@ function home() {
   window.scrollTo(0, 0);
 }
 
+/* ---------- Mãos sobre o teclado ---------- */
+var HOME = { 1: 'KeyA', 2: 'KeyS', 3: 'KeyD', 4: 'KeyF', 5: 'KeyJ', 6: 'KeyK', 7: 'KeyL', 8: 'Semicolon' };
+var H = null;
+var CALM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function buildHands() {
+  var box = document.getElementById('kbpos'), ns = 'http://www.w3.org/2000/svg';
+  if (!box) { H = null; return; }
+  var svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'hands'); svg.setAttribute('aria-hidden', 'true');
+  H = { box: box, f: {}, palms: [], raf: 0 };
+  for (var n = 0; n < 2; n++) { var r = document.createElementNS(ns, 'rect'); r.setAttribute('class', 'palm'); svg.appendChild(r); H.palms.push(r); }
+  ['1', '2', '3', '4', 'tl', 'tr', '5', '6', '7', '8'].forEach(function (id) {
+    var col = 'var(--f' + (id.length > 1 ? 9 : id) + ')';
+    var ln = document.createElementNS(ns, 'line'); ln.setAttribute('class', 'fl'); ln.style.stroke = col;
+    var c = document.createElementNS(ns, 'circle'); c.setAttribute('class', 'ft'); c.style.fill = col; c.style.stroke = col;
+    svg.appendChild(ln); svg.appendChild(c);
+    H.f[id] = { ln: ln, c: c, x: 0, y: 0, tx: 0, ty: 0, code: null, init: false };
+  });
+  box.appendChild(svg);
+  if (window.ResizeObserver) new ResizeObserver(function () { layoutHands(true); }).observe(box);
+  layoutHands(true);
+}
+function kc(code, fx) {
+  var el = H.box.querySelector('.k[data-code="' + code + '"]'); if (!el) return null;
+  var a = el.getBoundingClientRect(), b = H.box.getBoundingClientRect();
+  return { x: a.left - b.left + a.width * (fx == null ? 0.5 : fx), y: a.top - b.top + a.height / 2, w: a.width, h: a.height };
+}
+function homePos(id) { return id === 'tl' ? kc('Space', 0.37) : id === 'tr' ? kc('Space', 0.55) : kc(HOME[id]); }
+function layoutHands(snap) {
+  if (!H || !H.box.isConnected) return;
+  var a = kc('KeyA'); if (!a || !a.w) return;
+  var bh = H.box.getBoundingClientRect().height, sp = kc('Space'), top = sp.y - a.h * 0.15;
+  [[1, 4], [5, 8]].forEach(function (p, n) {
+    var l = kc(HOME[p[0]]), r = kc(HOME[p[1]]), e = H.palms[n];
+    e.setAttribute('x', l.x - a.w * 0.6); e.setAttribute('y', top);
+    e.setAttribute('width', r.x - l.x + a.w * 1.2); e.setAttribute('height', Math.max(4, bh - top));
+    e.setAttribute('rx', a.w * 0.7);
+  });
+  Object.keys(H.f).forEach(function (id) {
+    var f = H.f[id], hp = homePos(id), thumb = id.length > 1;
+    f.ln.setAttribute('x1', thumb ? kc(id === 'tl' ? 'KeyF' : 'KeyJ').x : hp.x);
+    f.ln.setAttribute('y1', sp.y + a.h * (thumb ? 0.45 : 0.25));
+    f.ln.setAttribute('stroke-width', a.w * 0.5); f.c.setAttribute('r', a.w * 0.3);
+    var t = (f.code && kc(f.code)) || hp; f.tx = t.x; f.ty = t.y;
+    if (snap || !f.init || CALM) { f.x = f.tx; f.y = f.ty; f.init = true; }
+  });
+  tick();
+}
+function tick() {
+  if (!H) return;
+  cancelAnimationFrame(H.raf);
+  var moving = false;
+  Object.keys(H.f).forEach(function (id) {
+    var f = H.f[id], dx = f.tx - f.x, dy = f.ty - f.y;
+    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) { f.x += dx * 0.3; f.y += dy * 0.3; moving = true; } else { f.x = f.tx; f.y = f.ty; }
+    f.ln.setAttribute('x2', f.x); f.ln.setAttribute('y2', f.y); f.c.setAttribute('cx', f.x); f.c.setAttribute('cy', f.y);
+  });
+  if (moving) H.raf = requestAnimationFrame(tick);
+}
+/* Mostra no teclado a tecla k (e, apagada, a tecla ghost que vem depois de um acento). k nulo = mãos na posição base. */
+function guide(k, ghost) {
+  document.querySelectorAll('.k').forEach(function (e) { e.classList.remove('go', 'go2'); });
+  document.querySelectorAll('.fg').forEach(function (e) { e.classList.remove('on'); });
+  var t = {}, act = [];
+  function mark(code, cls) { var el = document.querySelector('.k[data-code="' + code + '"]'); if (el) el.classList.add(cls); return el; }
+  var els = [];
+  if (k) {
+    els.push(mark(k.code, 'go'));
+    if (k.finger === 9) act.push('tr'); else { t[k.finger] = k.code; act.push(String(k.finger)); }
+    if (k.shift) { var sf = k.finger <= 4 ? 8 : 1, sc = sf === 8 ? 'ShiftRight' : 'ShiftLeft'; els.push(mark(sc, 'go')); t[sf] = sc; act.push(String(sf)); }
+    if (ghost) mark(ghost.code, 'go2');
+    document.querySelectorAll('.fg').forEach(function (e) { if (+e.dataset.f === k.finger) e.classList.add('on'); });
+  }
+  if (H) { Object.keys(H.f).forEach(function (id) { H.f[id].code = t[id] || null; H.f[id].c.classList.toggle('act', act.indexOf(id) >= 0); }); layoutHands(false); }
+  return els;
+}
+function desc(k) { return (k.shift ? 'Shift ' + (k.finger <= 4 ? 'direito' : 'esquerdo') + ' + ' : '') + '<b>' + esc(k.label) + '</b> (' + FINGER[k.finger] + ')'; }
+
 /* ---------- Tela do nível ---------- */
 function kbHtml() {
-  var h = '<div class="kb" aria-hidden="true">';
+  var h = '<div class="kbpos" id="kbpos"><div class="kb" aria-hidden="true">';
   ROWS.forEach(function (row) {
     h += '<div class="kr">';
     row.forEach(function (k) {
@@ -438,9 +533,20 @@ function kbHtml() {
     });
     h += '</div>';
   });
-  h += '</div><div class="fingers" aria-hidden="true"><div>';
+  h += '</div></div><div class="fingers" aria-hidden="true"><div>';
   for (var f = 1; f <= 8; f++) { h += '<span class="fg" data-f="' + f + '" style="--fc:var(--f' + f + ')">' + FSHORT[f] + '</span>'; if (f === 4) h += '</div><span class="fg" data-f="9" style="--fc:var(--f9)">' + FSHORT[9] + '</span><div>'; }
   return h + '</div></div>';
+}
+var STEPS = ['pos', 'demo', 'copy', 'test'];
+function setStep(s) {
+  var n = STEPS.indexOf(s);
+  document.querySelectorAll('.steps li').forEach(function (li, x) { li.className = x === n ? 'on' : (x < n ? 'ok' : ''); });
+  var box = document.getElementById('kbbox'), kbt = document.getElementById('kbt');
+  if (!box) return;
+  var show = S.kb || n < 2; /* na posição e na demonstração o teclado sempre aparece */
+  box.hidden = !show; kbt.hidden = n < 2;
+  kbt.textContent = S.kb ? 'Esconder o teclado (treino sem cola)' : 'Mostrar o teclado';
+  if (show) layoutHands(true);
 }
 function level(i) {
   var L = LEVELS[i];
@@ -448,36 +554,128 @@ function level(i) {
     '<div class="crumb">Nível ' + (i + 1) + ' de ' + LEVELS.length + ' · ' + STAGES[L.st] + '</div><h1>' + esc(L.t) + '</h1></div>' +
     '<div class="lesson"><div><h3>O que é novo</h3><p>' + esc(L.l) + '</p></div>' +
     '<div class="tip"><h3>Para ganhar velocidade</h3><p>' + esc(L.d) + '</p></div></div>' +
-    '<p class="goal">Meta para liberar o próximo nível: <b>' + L.w + ' PPM</b> com <b>' + L.a + '%</b> de precisão. A tecla errada não avança: corrija e siga.</p>' +
+    '<ol class="steps"><li>1. Posição das mãos</li><li>2. Eu faço</li><li>3. Você copia</li><li>4. Exercício</li></ol>' +
     '<div id="stage"></div>' +
     '<div class="kbwrap"><div id="kbbox">' + kbHtml() + '</div><div class="row" style="justify-content:center"><button class="btn quiet" id="kbt"></button></div></div>';
   document.getElementById('back').onclick = home;
-  var kbt = document.getElementById('kbt'), box = document.getElementById('kbbox');
-  function kbState() { box.hidden = !S.kb; kbt.textContent = S.kb ? 'Esconder o teclado (treino sem cola)' : 'Mostrar o teclado'; }
-  kbt.onclick = function () { S.kb = !S.kb; save(); kbState(); if (R) R.inp.focus(); };
-  kbState();
-  start(i);
+  document.getElementById('kbt').onclick = function () { S.kb = !S.kb; save(); if (R) setStep(R.step); if (R && R.inp) R.inp.focus(); };
+  buildHands();
+  stepPos(i);
   window.scrollTo(0, 0);
 }
 
-function start(i) {
-  var text = makeText(i);
-  var stage = document.getElementById('stage');
-  stage.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">' +
-    '<div class="meters"><span><b class="num" id="mw">0</b>PPM</span><span><b class="num" id="ma">100%</b>precisão</span><span><b class="num" id="mt">0:00</b>tempo</span></div>' +
-    '<div class="bar"><i id="mb"></i></div>' +
-    '<div class="pad"><div class="txt" id="txt"></div>' +
-    '<input id="inp" type="text" aria-label="Digite o texto mostrado" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">' +
-    '<div class="veil">Clique aqui ou aperte qualquer tecla para começar</div></div>' +
-    '<div class="hint" id="hint"></div></div>';
+/* Passo 1: posição das mãos */
+function stepPos(i) {
+  R = { i: i, step: 'pos', f: false, j: false };
+  document.getElementById('stage').innerHTML = '<div class="panel"><p class="say">Primeiro, as mãos no lugar.</p>' +
+    '<p>Indicador esquerdo no <b>F</b>, indicador direito no <b>J</b>: sinta o relevo dessas duas teclas. Os outros dedos caem ao lado, em <b>A S D</b> e <b>K L Ç</b>. Os dois polegares ficam soltos sobre a barra de espaço. O desenho no teclado abaixo mostra cada dedo na sua tecla.</p>' +
+    '<p>Sem olhar para as mãos, aperte <b>F</b> e depois <b>J</b> para confirmar.</p>' +
+    '<div class="row"><span class="chk" id="cf">F</span><span class="chk" id="cj">J</span>' +
+    '<button class="btn" id="posok">Já estou na posição</button></div></div>';
+  document.getElementById('posok').onclick = function () { stepDemo(i); };
+  setStep('pos');
+  guide(null);
+  ['KeyF', 'KeyJ'].forEach(function (c) { var el = document.querySelector('.k[data-code="' + c + '"]'); if (el) el.classList.add('go'); });
+}
+function posKey(e) {
+  var k = (e.key || '').toLowerCase();
+  if (e.code === 'KeyF' || k === 'f') R.f = true;
+  if (e.code === 'KeyJ' || k === 'j') R.j = true;
+  var cf = document.getElementById('cf'), cj = document.getElementById('cj');
+  if (cf) cf.classList.toggle('ok', R.f); if (cj) cj.classList.toggle('ok', R.j);
+  if (R.f && R.j && !R.go) { R.go = true; var i = R.i; setTimeout(function () { if (R && R.step === 'pos' && R.i === i) stepDemo(i); }, 450); }
+}
+
+/* Passo 2: o aplicativo digita primeiro */
+function demoText(i) {
+  var L = LEVELS[i];
+  if (L.m === 'keys') {
+    var ltr = L.k.replace(/[^a-zç]/g, '').split(''), pun = L.k.replace(/[a-zç]/g, '').split('');
+    var s = ltr.map(function (c) { return c + c + c; }).join(' ');
+    if (ltr.length >= 2) s += ' ' + ltr[0] + ltr[1] + ltr[0] + ' ' + ltr[1] + ltr[0] + ltr[1];
+    pun.forEach(function (p) { s += ' ' + ltr[0] + p; });
+    return s;
+  }
+  return { review: 'que tal hoje', caps: 'Ana e Lucas', acc1: 'está não', acc2: 'você às três?', num: '10 25 2026', sym: '(a-b) "ok" @', sent: 'O ritmo é tudo.' }[L.m];
+}
+function padHtml(withInput) {
+  return '<div class="pad"><div class="txt" id="txt"></div>' +
+    (withInput ? '<input id="inp" type="text" aria-label="Digite o texto mostrado" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"><div class="veil">Clique aqui ou aperte qualquer tecla para continuar</div>' : '') +
+    '</div><div class="hint" id="hint"></div>';
+}
+function fillTxt(text) {
   var txt = document.getElementById('txt'), spans = [];
   for (var c = 0; c < text.length; c++) { var sp = document.createElement('span'); sp.textContent = text[c]; txt.appendChild(sp); spans.push(sp); }
-  R = { i: i, text: text, spans: spans, idx: 0, ok: 0, err: 0, miss: {}, t0: 0, dead: false, used: 0, done: false,
+  return spans;
+}
+function stepDemo(i) {
+  var text = demoText(i), fast = LEVELS[i].m === 'sent';
+  document.getElementById('stage').innerHTML = '<div class="col"><p class="say">Observe: eu faço primeiro.</p>' + padHtml(false) +
+    '<div class="row"><button class="btn quiet" id="skip">Pular a demonstração</button></div></div>';
+  var spans = fillTxt(text);
+  R = { i: i, step: 'demo', text: text };
+  var me = R, hint = document.getElementById('hint'), seq = [];
+  document.getElementById('skip').onclick = function () { begin(i, text, 'copy'); };
+  setStep('demo');
+  for (var c = 0; c < text.length; c++) {
+    var info = keyInfo(text[c]); if (!info) continue;
+    if (info.dead) seq.push({ k: info.dead, ghost: info.main, at: c, fin: false });
+    seq.push({ k: info.main, at: c, fin: true });
+  }
+  var T1 = fast ? 240 : 460, T2 = fast ? 130 : 240;
+  function alive() { return R === me && document.getElementById('skip'); }
+  function next(n) {
+    if (!alive()) return;
+    if (n >= seq.length) { guide(null); hint.innerHTML = 'Pronto. Agora é a sua vez.'; setTimeout(function () { if (alive()) begin(i, text, 'copy'); }, 900); return; }
+    var s = seq[n];
+    spans[s.at].className = 'cur';
+    var els = guide(s.k, s.ghost);
+    hint.innerHTML = 'Eu aperto ' + desc(s.k) + (s.ghost ? ' e nada aparece ainda' : '');
+    setTimeout(function () {
+      if (!alive()) return;
+      els.forEach(function (e) { if (e) e.classList.add('down'); });
+      if (s.fin) spans[s.at].className = 'done';
+      setTimeout(function () {
+        els.forEach(function (e) { if (e) e.classList.remove('down'); });
+        if (!alive()) return;
+        if (!fast) guide(null); /* o dedo volta para a fila guia */
+        setTimeout(function () { next(n + 1); }, fast ? 0 : 140);
+      }, T2);
+    }, T1);
+  }
+  guide(null);
+  setTimeout(function () { next(0); }, 700);
+}
+
+/* Passos 3 e 4: o aluno digita (copy = repetir a demonstração, test = exercício valendo a meta) */
+function start(i) { begin(i, makeText(i), 'test'); }
+function begin(i, text, mode) {
+  var L = LEVELS[i], test = mode === 'test';
+  document.getElementById('stage').innerHTML = '<div class="col">' +
+    (test ? '<p class="say">Agora o exercício completo.</p><p class="goal">Meta para liberar o próximo nível: <b>' + L.w + ' PPM</b> com <b>' + L.a + '%</b> de precisão. A tecla errada não avança: corrija e siga.</p>' +
+      '<div class="meters"><span><b class="num" id="mw">0</b>PPM</span><span><b class="num" id="ma">100%</b>precisão</span><span><b class="num" id="mt">0:00</b>tempo</span></div><div class="bar"><i id="mb"></i></div>'
+      : '<p class="say">Sua vez: repita o que eu fiz, com os mesmos dedos.</p>') +
+    padHtml(true) +
+    (test ? '' : '<div class="row"><button class="btn quiet" id="again2">Ver a demonstração de novo</button></div>') + '</div>';
+  if (!test) document.getElementById('again2').onclick = function () { stepDemo(i); };
+  R = { i: i, step: mode, text: text, spans: fillTxt(text), idx: 0, ok: 0, err: 0, miss: {}, t0: 0, dead: false, used: 0, done: false,
         inp: document.getElementById('inp'), timer: null };
   R.inp.addEventListener('input', onInput);
   R.inp.addEventListener('compositionend', function () { R.inp.value = ''; R.used = 0; });
+  setStep(mode);
   paint();
   R.inp.focus({ preventScroll: true });
+}
+function copyDone() {
+  var i = R.i, errs = R.err;
+  R.done = true; clearInterval(R.timer);
+  guide(null);
+  document.getElementById('stage').innerHTML = '<div class="panel"><p class="say">' + (errs ? 'Feito, com ' + errs + (errs === 1 ? ' tecla errada' : ' teclas erradas') + ' no caminho.' : 'Isso. Mesmos dedos, mesmo caminho.') + '</p>' +
+    '<p>Agora vem o exercício completo deste nível, com a meta de velocidade e precisão. As mãos no teclado continuam mostrando qual dedo usar.</p>' +
+    '<div class="row"><button class="btn primary" id="gotest">Começar o exercício</button><button class="btn" id="redo">Ver a demonstração de novo</button></div></div>';
+  document.getElementById('gotest').onclick = function () { start(i); };
+  document.getElementById('redo').onclick = function () { stepDemo(i); };
+  document.getElementById('gotest').focus();
 }
 
 function onInput(e) {
@@ -492,14 +690,14 @@ function onInput(e) {
   for (var j = 0; j < fresh.length; j++) if (!type(fresh[j])) break;
   R.dead = false;
   paint();
-  if (R.idx >= R.text.length) finish();
+  if (R.idx >= R.text.length) { if (R.step === 'copy') copyDone(); else finish(); }
 }
 var DEADS_SET = ['´', '`', '~', '^', '¨'];
 
 function type(ch) {
   if (R.idx >= R.text.length) return false;
   if (!R.t0) { R.t0 = performance.now(); R.timer = setInterval(meters, 400); }
-  if (ch === '\u00a0') ch = ' ';
+  if (ch === ' ') ch = ' ';
   var want = R.text[R.idx], sp = R.spans[R.idx];
   if (ch === want) { R.ok++; sp.className = 'done' + (sp.dataset.m ? ' miss' : ''); R.idx++; return true; }
   R.err++; R.miss[want] = (R.miss[want] || 0) + 1; sp.dataset.m = '1'; R.bad = true;
@@ -512,7 +710,7 @@ function stats() {
   return { wpm: min > 0 ? Math.round(R.idx / 5 / min) : 0, acc: tot ? Math.round(R.ok / tot * 100) : 100, sec: Math.round(min * 60) };
 }
 function meters() {
-  if (!R || !document.getElementById('mw')) return;
+  if (!R || !R.spans || !document.getElementById('mw')) return;
   var s = stats();
   document.getElementById('mw').textContent = s.wpm;
   document.getElementById('ma').textContent = s.acc + '%';
@@ -521,8 +719,8 @@ function meters() {
 }
 
 function paint() {
-  if (!R) return;
-  var cur = R.spans[R.idx];
+  if (!R || !R.spans) return;
+  var cur = R.spans[R.idx], hint = document.getElementById('hint');
   R.spans.forEach(function (s) { if (s.classList.contains('cur')) s.className = ''; });
   if (cur) {
     cur.className = 'cur' + (R.bad ? ' bad' : '');
@@ -531,23 +729,13 @@ function paint() {
   }
   R.bad = false;
   meters();
-  /* teclado e dica */
-  var keys = document.querySelectorAll('.k'), fgs = document.querySelectorAll('.fg'), hint = document.getElementById('hint');
-  keys.forEach(function (k) { k.classList.remove('go', 'go2'); });
-  fgs.forEach(function (f) { f.classList.remove('on'); });
-  if (!cur) { hint.textContent = ''; return; }
-  var ch = R.text[R.idx], info = keyInfo(ch);
-  if (!info) { hint.textContent = ''; return; }
-  var step = (info.dead && !R.dead) ? info.dead : info.main;
-  mark(step.code, 'go');
-  if (step.shift) mark(step.finger <= 4 ? 'ShiftRight' : 'ShiftLeft', 'go');
-  if (info.dead && !R.dead) mark(info.main.code, 'go2');
-  fgs.forEach(function (f) { if (+f.dataset.f === step.finger) f.classList.add('on'); });
-  function desc(k) { return (k.shift ? 'Shift ' + (k.finger <= 4 ? 'direito' : 'esquerdo') + ' + ' : '') + '<b>' + esc(k.label) + '</b> (' + FINGER[k.finger] + ')'; }
+  var info = cur && keyInfo(R.text[R.idx]);
+  if (!info) { guide(null); if (hint) hint.textContent = ''; return; }
+  var first = info.dead && !R.dead;
+  guide(first ? info.dead : info.main, first ? info.main : null);
   hint.innerHTML = info.dead
-    ? 'Para <b>' + esc(ch) + '</b>: primeiro ' + desc(info.dead) + ', depois ' + desc(info.main)
+    ? 'Para <b>' + esc(R.text[R.idx]) + '</b>: primeiro ' + desc(info.dead) + ', depois ' + desc(info.main)
     : 'Próxima tecla: ' + desc(info.main);
-  function mark(code, cls) { var el = document.querySelector('.k[data-code="' + code + '"]'); if (el) el.classList.add(cls); }
 }
 
 function finish() {
@@ -571,7 +759,7 @@ function finish() {
     (worst.length ? '<p class="goal">Teclas que mais custaram: ' + worst.map(function (c) { return '<b style="font-family:var(--mono)">' + (c === ' ' ? 'espaço' : esc(c)) + '</b> (' + R.miss[c] + ')'; }).join(', ') + '</p>' : '') +
     '<div class="row">' + (canNext ? '<button class="btn primary" id="nx">Próximo nível</button>' : '') +
     '<button class="btn' + (canNext ? '' : ' primary') + '" id="again">Repetir este nível</button><button class="btn quiet" id="hm">Todos os níveis</button></div></div>';
-  document.querySelectorAll('.k').forEach(function (k) { k.classList.remove('go', 'go2'); });
+  guide(null);
   document.getElementById('again').onclick = function () { start(i); };
   document.getElementById('hm').onclick = home;
   if (canNext) document.getElementById('nx').onclick = function () { level(i + 1); };
@@ -587,8 +775,9 @@ document.addEventListener('keydown', function (e) {
   var k = document.querySelector('.k[data-code="' + e.code + '"]');
   if (k) k.classList.add('down');
   if (!R) return;
-  if (e.key === 'Escape') { start(R.i); return; }
-  if (R.done) return;
+  if (e.key === 'Escape') { if (R.step === 'pos') stepPos(R.i); else if (R.step === 'demo') stepDemo(R.i); else if (R.step === 'copy') begin(R.i, R.text, 'copy'); else start(R.i); return; }
+  if (R.step === 'pos') { posKey(e); return; }
+  if (R.step === 'demo' || R.done) return;
   if (e.key === 'Dead') { R.dead = true; paint(); }
   if (e.key === 'Tab') e.preventDefault();
   if (document.activeElement !== R.inp && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) R.inp.focus({ preventScroll: true });
